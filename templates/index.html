@@ -8,10 +8,23 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#1976d2">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
     <div class="container">
-        <h1>รายการใบ OT</h1>
+        <div class="header-bar">
+            <h1>รายการใบ OT</h1>
+            {% if username %}
+                <div class="user-info">
+                    สวัสดี, {{ username }}!
+                    <a href="{{ url_for('logout') }}"><button class="logout-button">ออกจากระบบ</button></a>
+                </div>
+            {% endif %}
+        </div>
 
         <!-- Search Bar -->
         <div class="search-container">
@@ -21,7 +34,7 @@
             </form>
         </div>
 
-        <p><button type="button" onclick="window.location.href='{{ url_for('add_ot_slip') }}'">เพิ่มใบ OT ใหม่</button></p>
+        <p><a href="{{ url_for('add_ot_slip') }}"><button>เพิ่มใบ OT ใหม่</button></a></p>
 
         {% if ot_slips %}
             <table>
@@ -35,6 +48,7 @@
                         <th>รูปภาพ</th>
                         <th>รายละเอียด</th>
                         <th>วันที่บันทึก</th>
+                        <th>การจัดการ</th> {# เพิ่มคอลัมน์สำหรับปุ่มลบ #}
                     </tr>
                 </thead>
                 <tbody>
@@ -56,6 +70,9 @@
                             </td>
                             <td>{{ slip.description or 'N/A' }}</td>
                             <td>{{ slip.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <button class="button-danger delete-button" data-id="{{ slip.id }}">ลบ</button>
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -75,6 +92,23 @@
             <div class="modal-body" id="modalBody"></div>
             <div class="modal-footer">
                 <button class="close-button-footer">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal for Deletion -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">ยืนยันการลบ</h3>
+                <span class="close-button delete-close-button">&times;</span>
+            </div>
+            <div class="modal-body">
+                คุณแน่ใจหรือไม่ว่าต้องการลบใบ OT นี้? การกระทำนี้ไม่สามารถย้อนกลับได้
+            </div>
+            <div class="modal-footer button-group" style="justify-content: flex-end;">
+                <button class="logout-button delete-cancel-button">ยกเลิก</button>
+                <button class="button-danger delete-confirm-button">ลบ</button>
             </div>
         </div>
     </div>
@@ -111,15 +145,71 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                <script>
-                    var type = 'info';
-                    if ({{ category|tojson }} === 'success') type = 'success';
-                    else if ({{ category|tojson }} === 'error') type = 'error';
-                    showModal('แจ้งเตือน', {{ message|tojson }}, type);
-                </script>
+                    // แปลง category จาก Flask เป็น type สำหรับ CSS/JS
+                    let type = 'info';
+                    if (category === 'success') {
+                        type = 'success';
+                    } else if (category === 'error') {
+                        type = 'error';
+                    }
+                    showModal('แจ้งเตือน', '{{ message | safe }}', type);
                 {% endfor %}
             {% endif %}
         {% endwith %}
+
+        // JavaScript สำหรับจัดการ Modal ยืนยันการลบ
+        const confirmModal = document.getElementById("confirmModal");
+        const deleteButtons = document.querySelectorAll(".delete-button");
+        const deleteCancelButton = document.querySelector(".delete-cancel-button");
+        const deleteConfirmButton = document.querySelector(".delete-confirm-button");
+        const deleteCloseButton = document.querySelector(".delete-close-button");
+        let otIdToDelete = null;
+
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                otIdToDelete = this.dataset.id;
+                confirmModal.style.display = "flex";
+            });
+        });
+
+        deleteCancelButton.addEventListener('click', function() {
+            confirmModal.style.display = "none";
+            otIdToDelete = null;
+        });
+
+        deleteCloseButton.addEventListener('click', function() {
+            confirmModal.style.display = "none";
+            otIdToDelete = null;
+        });
+
+        deleteConfirmButton.addEventListener('click', function() {
+            if (otIdToDelete) {
+                // สร้างฟอร์มชั่วคราวเพื่อส่ง POST request
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/delete_ot/${otIdToDelete}`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+            confirmModal.style.display = "none";
+        });
+
+        // ปิด modal เมื่อคลิกนอกกล่องข้อความ
+        window.addEventListener('click', function(event) {
+            if (event.target == confirmModal) {
+                confirmModal.style.display = "none";
+                otIdToDelete = null;
+            }
+        });
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/static/service-worker.js')
+            .then(function(reg) { /* success */ })
+            .catch(function(err) { /* fail */ });
+        });
+      }
     </script>
 </body>
 </html>

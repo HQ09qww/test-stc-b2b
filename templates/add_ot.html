@@ -8,6 +8,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#1976d2">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
     <div class="container">
@@ -27,7 +32,14 @@
             </div>
         </div>
 
-        <form method="POST" action="{{ url_for('add_ot_slip') }}" enctype="multipart/form-data">
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="spinner"></div>
+            <div class="loading-text">กำลังบันทึกข้อมูล...</div>
+        </div>
+
+
+        <form id="otForm" method="POST" action="{{ url_for('add_ot_slip') }}" enctype="multipart/form-data">
             <div>
                 <label for="employee_id">เลขพนักงาน:</label>
                 <input type="text" id="employee_id" name="employee_id" required value="{{ employee_id if employee_id }}">
@@ -43,11 +55,11 @@
             </div>
             <div>
                 <label for="ot_date">วันที่ OT:</label>
-                <input type="date" id="ot_date" name="ot_date" required>
+                <input type="date" id="ot_date" name="ot_date" required value="{{ ot_date if ot_date }}">
             </div>
             <div>
                 <label for="hours">จำนวนชั่วโมง:</label>
-                <input type="number" id="hours" name="hours" step="0.5" min="0" required>
+                <input type="number" id="hours" name="hours" step="0.5" min="0" required value="{{ hours if hours }}">
             </div>
             <div>
                 <label for="ot_image">รูปภาพใบ OT:</label>
@@ -55,11 +67,12 @@
             </div>
             <div>
                 <label for="description">รายละเอียดเพิ่มเติม (ถ้ามี):</label>
-                <textarea id="description" name="description" rows="4"></textarea>
+                <textarea id="description" name="description" rows="4">{{ description if description }}</textarea>
             </div>
             <div class="button-group">
                 <button type="submit">บันทึกใบ OT</button>
-                <button type="button" style="background-color: #6c757d;" onclick="window.location.href='{{ url_for('index') }}'">กลับไปหน้ารายการ</button>
+                <button type="button" class="logout-button" onclick="resetForm()">ล้างข้อมูล</button>
+                <a href="{{ url_for('index') }}"><button type="button" style="background-color: #6c757d;">กลับไปหน้ารายการ</button></a>
             </div>
         </form>
     </div>
@@ -93,20 +106,15 @@
         // ตรวจสอบและแสดง Flash Messages จาก Flask
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <script>
-                (function() {
-                    var flashMessages = [];
-                    {% for category, message in messages %}
-                        flashMessages.push({category: {{ category|tojson }}, message: {{ message|tojson }}});
-                    {% endfor %}
-                    flashMessages.forEach(function(msg) {
-                        var type = 'info';
-                        if (msg.category === 'success') type = 'success';
-                        else if (msg.category === 'error') type = 'error';
-                        showModal('แจ้งเตือน', msg.message, type);
-                    });
-                })();
-                </script>
+                {% for category, message in messages %}
+                    let type = 'info';
+                    if (category === 'success') {
+                        type = 'success';
+                    } else if (category === 'error') {
+                        type = 'error';
+                    }
+                    showModal('แจ้งเตือน', '{{ message | safe }}', type);
+                {% endfor %}
             {% endif %}
         {% endwith %}
 
@@ -114,6 +122,8 @@
         const employeeIdInput = document.getElementById('employee_id');
         const employeeNameInput = document.getElementById('employee_name');
         const departmentInput = document.getElementById('department');
+        const otForm = document.getElementById('otForm');
+        const loadingOverlay = document.getElementById('loadingOverlay');
 
         employeeIdInput.addEventListener('input', function() {
             const employeeId = this.value.trim();
@@ -149,6 +159,30 @@
                 employeeIdInput.dispatchEvent(new Event('input')); // Trigger lookup
             }
         });
+
+        // ฟังก์ชันสำหรับล้างข้อมูลในฟอร์ม
+        function resetForm() {
+            otForm.reset(); // รีเซ็ตค่าในฟอร์มทั้งหมด
+            employeeNameInput.value = ''; // ล้างค่าที่อาจจะถูก readonly
+            departmentInput.value = ''; // ล้างค่าที่อาจจะถูก readonly
+        }
+
+        // แสดง Loading Spinner เมื่อกด Submit
+        otForm.addEventListener('submit', function() {
+            // ตรวจสอบ Client-side validation ก่อนแสดง loading
+            if (otForm.checkValidity()) {
+                loadingOverlay.style.display = 'flex';
+            }
+        });
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/static/service-worker.js')
+            .then(function(reg) { /* success */ })
+            .catch(function(err) { /* fail */ });
+        });
+      }
     </script>
 </body>
 </html>
