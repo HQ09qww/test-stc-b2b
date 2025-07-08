@@ -23,6 +23,8 @@ R2_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID', 'f38974467f3cc3f24aa8dbb14
 R2_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY', '03b785eb5df51180f93787c85cf96ff77b1614113d3af3777b4ee3de3cd833c9')
 R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID', 'af83c7dc9757b49457b31c4791bdf16e')
 R2_BUCKET = os.environ.get('R2_BUCKET', 'test-stc-ot')
+# Ensure no < > in endpoint
+R2_ACCOUNT_ID = R2_ACCOUNT_ID.replace('<','').replace('>','')
 R2_ENDPOINT = f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com'
 
 session_boto = boto3.session.Session()
