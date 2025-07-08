@@ -25,7 +25,7 @@ R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID', 'af83c7dc9757b49457b31c4791bdf16
 R2_BUCKET = os.environ.get('R2_BUCKET', 'test-stc-ot')
 # Ensure no < > in endpoint
 R2_ACCOUNT_ID = R2_ACCOUNT_ID.replace('<','').replace('>','')
-R2_ENDPOINT = f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com'
+R2_ENDPOINT = f'https://{test-stc-ot}.r2.cloudflarestorage.com'
 
 session_boto = boto3.session.Session()
 r2_client = session_boto.client(
@@ -44,7 +44,7 @@ def upload_to_r2(file_storage, filename):
         ExtraArgs={'ContentType': file_storage.content_type}
     )
     # URL สาธารณะ (ถ้า bucket เป็น public)
-    return f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{R2_BUCKET}/{filename}"
+    return f"https://{test-stc-ot}.r2.cloudflarestorage.com/{R2_BUCKET}/{filename}"
 
 # --- ข้อมูลพนักงานจำลอง (ในแอปจริงจะมาจากฐานข้อมูลพนักงาน) ---
 # ใช้สำหรับฟังก์ชัน Auto-populate ชื่อและแผนก
