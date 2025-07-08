@@ -2,44 +2,153 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>เพิ่มใบ OT</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เพิ่มใบ OT ใหม่</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-<div class="container mt-4">
-    <h1>เพิ่มใบ OT</h1>
-    <form method="post" enctype="multipart/form-data">
-        <div class="mb-3">
-            <label for="employee_name" class="form-label">ชื่อพนักงาน</label>
-            <input type="text" class="form-control" id="employee_name" name="employee_name" required>
+    <div class="container">
+        <h1>เพิ่มใบ OT ใหม่</h1>
+
+        <!-- The Modal Structure (เหมือนใน index.html) -->
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="modalTitle"></h3>
+                    <span class="close-button">&times;</span>
+                </div>
+                <div class="modal-body" id="modalBody"></div>
+                <div class="modal-footer">
+                    <button class="close-button-footer">ปิด</button>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label for="department" class="form-label">แผนก</label>
-            <select class="form-select" id="department" name="department" required>
-                {% for dept in departments %}
-                <option value="{{ dept }}">{{ dept }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="mb-3">
-            <label for="ot_date" class="form-label">วันที่ OT</label>
-            <input type="date" class="form-control" id="ot_date" name="ot_date" required>
-        </div>
-        <div class="mb-3">
-            <label for="hours" class="form-label">ชั่วโมง OT</label>
-            <input type="number" step="0.1" class="form-control" id="hours" name="hours" required>
-        </div>
-        <div class="mb-3">
-            <label for="description" class="form-label">รายละเอียดเพิ่มเติม</label>
-            <textarea class="form-control" id="description" name="description"></textarea>
-        </div>
-        <div class="mb-3">
-            <label for="ot_image" class="form-label">แนบรูปภาพ (ถ้ามี)</label>
-            <input type="file" class="form-control" id="ot_image" name="ot_image">
-        </div>
-        <button type="submit" class="btn btn-success">บันทึก</button>
-        <a href="{{ url_for('index') }}" class="btn btn-secondary">กลับ</a>
-    </form>
-</div>
+
+        <form method="POST" action="{{ url_for('add_ot_slip') }}" enctype="multipart/form-data">
+            <div>
+                <label for="employee_id">เลขพนักงาน:</label>
+                <input type="text" id="employee_id" name="employee_id" required value="{{ employee_id if employee_id }}">
+            </div>
+            <div>
+                <label for="employee_name">ชื่อพนักงาน:</label>
+                <input type="text" id="employee_name" name="employee_name" required readonly value="{{ employee_name if employee_name }}">
+            </div>
+            <div>
+                <label for="department">แผนก:</label>
+                <!-- แผนกจะถูกกรอกอัตโนมัติและเป็น readonly -->
+                <input type="text" id="department" name="department" required readonly value="{{ department if department }}">
+            </div>
+            <div>
+                <label for="ot_date">วันที่ OT:</label>
+                <input type="date" id="ot_date" name="ot_date" required>
+            </div>
+            <div>
+                <label for="hours">จำนวนชั่วโมง:</label>
+                <input type="number" id="hours" name="hours" step="0.5" min="0" required>
+            </div>
+            <div>
+                <label for="ot_image">รูปภาพใบ OT:</label>
+                <input type="file" id="ot_image" name="ot_image" accept="image/*">
+            </div>
+            <div>
+                <label for="description">รายละเอียดเพิ่มเติม (ถ้ามี):</label>
+                <textarea id="description" name="description" rows="4"></textarea>
+            </div>
+            <div class="button-group">
+                <button type="submit">บันทึกใบ OT</button>
+                <button type="button" style="background-color: #6c757d;" onclick="window.location.href='{{ url_for('index') }}'">กลับไปหน้ารายการ</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // JavaScript สำหรับจัดการ Modal แจ้งเตือน (เหมือนใน index.html)
+        const modal = document.getElementById("myModal");
+        const modalTitle = document.getElementById("modalTitle");
+        const modalBody = document.getElementById("modalBody");
+        const closeButtons = document.querySelectorAll(".close-button, .close-button-footer");
+
+        function showModal(title, message, type) {
+            modalTitle.textContent = title;
+            modalBody.textContent = message;
+            modalBody.className = `modal-body flash-message ${type}`;
+            modal.style.display = "flex";
+
+            closeButtons.forEach(button => {
+                button.onclick = function() {
+                    modal.style.display = "none";
+                }
+            });
+
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+        }
+
+        // ตรวจสอบและแสดง Flash Messages จาก Flask
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <script>
+                (function() {
+                    var flashMessages = [];
+                    {% for category, message in messages %}
+                        flashMessages.push({category: {{ category|tojson }}, message: {{ message|tojson }}});
+                    {% endfor %}
+                    flashMessages.forEach(function(msg) {
+                        var type = 'info';
+                        if (msg.category === 'success') type = 'success';
+                        else if (msg.category === 'error') type = 'error';
+                        showModal('แจ้งเตือน', msg.message, type);
+                    });
+                })();
+                </script>
+            {% endif %}
+        {% endwith %}
+
+        // JavaScript สำหรับ Auto-populate ชื่อและแผนก
+        const employeeIdInput = document.getElementById('employee_id');
+        const employeeNameInput = document.getElementById('employee_name');
+        const departmentInput = document.getElementById('department');
+
+        employeeIdInput.addEventListener('input', function() {
+            const employeeId = this.value.trim();
+            if (employeeId.length > 0) {
+                fetch(`/api/employee_lookup/${employeeId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.found) {
+                            employeeNameInput.value = data.name;
+                            departmentInput.value = data.department;
+                        } else {
+                            employeeNameInput.value = '';
+                            departmentInput.value = '';
+                            // showModal('ข้อผิดพลาด', data.message, 'error'); // อาจจะแจ้งเตือนถ้าไม่พบ
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching employee data:', error);
+                        employeeNameInput.value = '';
+                        departmentInput.value = '';
+                        showModal('ข้อผิดพลาด', 'ไม่สามารถดึงข้อมูลพนักงานได้', 'error');
+                    });
+            } else {
+                employeeNameInput.value = '';
+                departmentInput.value = '';
+            }
+        });
+
+        // หากมีการโหลดหน้าฟอร์มซ้ำ (เช่น หลังกดบันทึกแล้วมี error)
+        // ให้ลองดึงข้อมูลพนักงานขึ้นมาใหม่ ถ้ามี employee_id อยู่แล้ว
+        document.addEventListener('DOMContentLoaded', function() {
+            if (employeeIdInput.value.length > 0 && employeeNameInput.value === '' && departmentInput.value === '') {
+                employeeIdInput.dispatchEvent(new Event('input')); // Trigger lookup
+            }
+        });
+    </script>
 </body>
 </html>

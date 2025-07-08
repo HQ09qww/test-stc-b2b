@@ -1,0 +1,309 @@
+/* static/style.css */
+
+/* --- Google Fonts: Inter --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* --- Color Palette (Blue Tones) --- */
+:root {
+    --primary-blue: #007bff; /* Main blue for buttons, accents */
+    --light-blue: #e0f2ff;   /* Light background for elements */
+    --dark-blue: #0056b3;    /* Darker blue for hover states */
+    --text-dark: #333;       /* Dark text */
+    --text-light: #f8f9fa;   /* Light text (on dark backgrounds) */
+    --bg-light: #f8f9fa;     /* Light background for body */
+    --bg-card: #ffffff;      /* Card/container background */
+    --border-color: #dee2e6; /* Border color for inputs, tables */
+    --success-bg: #d4edda;
+    --success-text: #155724;
+    --error-bg: #f8d7da;
+    --error-text: #721c24;
+    --info-bg: #d1ecf1;
+    --info-text: #0c5460;
+}
+
+/* --- Base Styles --- */
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Align items to the start of the cross axis */
+    min-height: 100vh; /* Ensure body takes full viewport height */
+}
+
+.container {
+    width: 100%;
+    max-width: 900px; /* Max width for content */
+    margin: 20px auto;
+    background: var(--bg-card);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    box-sizing: border-box; /* Include padding in width */
+}
+
+h1, h2 {
+    color: var(--primary-blue);
+    text-align: center;
+    margin-bottom: 25px;
+    font-weight: 600;
+}
+
+/* --- Form Styles --- */
+form div {
+    margin-bottom: 18px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input[type="file"],
+select,
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 1rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+input[type="file"] {
+    padding: 8px; /* Adjust padding for file input */
+}
+
+/* --- Button Styles --- */
+button {
+    background-color: var(--primary-blue);
+    color: var(--text-light);
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    display: inline-block; /* For centering or side-by-side */
+}
+
+button:hover {
+    background-color: var(--dark-blue);
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+.button-group {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+/* --- Table Styles --- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 30px;
+    background-color: var(--bg-card);
+    border-radius: 8px;
+    overflow: hidden; /* For rounded corners on table */
+}
+
+th, td {
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    text-align: left;
+    font-size: 0.95rem;
+}
+
+th {
+    background-color: var(--light-blue);
+    color: var(--primary-blue);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+tr:nth-child(even) {
+    background-color: #f2faff; /* Lighter blue for even rows */
+}
+
+.ot-image {
+    max-width: 80px; /* Smaller image in table */
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* --- Flash Message / Modal Styles --- */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    justify-content: center;
+    align-items: center;
+    padding-top: 50px;
+}
+
+.modal-content {
+    background-color: var(--bg-card);
+    margin: auto;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 80%;
+    max-width: 400px;
+    text-align: center;
+    position: relative;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+}
+
+.close-button {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: #000;
+    text-decoration: none;
+}
+
+.modal-body {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+}
+
+.modal-footer {
+    text-align: right;
+}
+
+/* Flash message specific styling */
+.flash-message {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.flash-message.success {
+    background-color: var(--success-bg);
+    color: var(--success-text);
+    border: 1px solid var(--success-text);
+}
+
+.flash-message.error {
+    background-color: var(--error-bg);
+    color: var(--error-text);
+    border: 1px solid var(--error-text);
+}
+
+.flash-message.info {
+    background-color: var(--info-bg);
+    color: var(--info-text);
+    border: 1px solid var(--info-text);
+}
+
+/* --- Search Bar Styles --- */
+.search-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 25px;
+    gap: 10px;
+}
+
+.search-container input[type="text"] {
+    flex-grow: 1;
+    max-width: 400px;
+    border-radius: 8px;
+    padding: 10px 15px;
+    font-size: 1rem;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    .container {
+        padding: 20px;
+        margin: 10px auto;
+    }
+    th, td {
+        padding: 8px;
+        font-size: 0.85rem;
+    }
+    .ot-image {
+        max-width: 60px;
+    }
+    .search-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    .search-container input[type="text"] {
+        max-width: 100%;
+    }
+    button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    .button-group {
+        flex-direction: column;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
