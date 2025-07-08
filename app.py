@@ -1,8 +1,13 @@
+
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from dotenv import load_dotenv
+# Cloudflare R2
+import boto3
+from werkzeug.utils import secure_filename
+
 
 load_dotenv()
 app = Flask(__name__)
@@ -11,6 +16,33 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:/
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fwfregwqdsvqwddawfe')
 db = SQLAlchemy(app)
+
+
+# --- Cloudflare R2 config (set your env or .env) ---
+R2_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID', 'f38974467f3cc3f24aa8dbb144e56352')
+R2_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY', '03b785eb5df51180f93787c85cf96ff77b1614113d3af3777b4ee3de3cd833c9')
+R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID', 'af83c7dc9757b49457b31c4791bdf16e')
+R2_BUCKET = os.environ.get('R2_BUCKET', 'test-stc-ot')
+R2_ENDPOINT = f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com'
+
+session_boto = boto3.session.Session()
+r2_client = session_boto.client(
+    service_name='s3',
+    aws_access_key_id=R2_ACCESS_KEY_ID,
+    aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+    endpoint_url=R2_ENDPOINT,
+)
+
+# ฟังก์ชันอัปโหลดไฟล์ไป R2
+def upload_to_r2(file_storage, filename):
+    r2_client.upload_fileobj(
+        file_storage,
+        R2_BUCKET,
+        filename,
+        ExtraArgs={'ContentType': file_storage.content_type}
+    )
+    # URL สาธารณะ (ถ้า bucket เป็น public)
+    return f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{R2_BUCKET}/{filename}"
 
 # --- ข้อมูลพนักงานจำลอง (ในแอปจริงจะมาจากฐานข้อมูลพนักงาน) ---
 # ใช้สำหรับฟังก์ชัน Auto-populate ชื่อและแผนก
@@ -87,16 +119,10 @@ def add_ot_slip():
         if 'ot_image' in request.files:
             file = request.files['ot_image']
             if file and file.filename:
-                # บันทึกไฟล์ลงโฟลเดอร์ static/uploads (สร้างโฟลเดอร์นี้ถ้ายังไม่มี)
-                upload_folder = os.path.join(app.root_path, 'static', 'uploads')
-                os.makedirs(upload_folder, exist_ok=True)
-                # สร้างชื่อไฟล์ไม่ซ้ำ
-                from werkzeug.utils import secure_filename
                 import time
                 filename = f"{employee_id}_{int(time.time())}_{secure_filename(file.filename)}"
-                file_path = os.path.join(upload_folder, filename)
-                file.save(file_path)
-                image_url = url_for('static', filename=f'uploads/{filename}')
+                # อัปโหลดไป R2
+                image_url = upload_to_r2(file, filename)
         try:
             ot_date = datetime.strptime(ot_date_str, '%Y-%m-%d').date()
             hours = float(hours_str)
