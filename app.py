@@ -9,10 +9,6 @@ from botocore.client import Config
 
 
 # โหลดตัวแปรสภาพแวดล้อมจากไฟล์ .env (สำหรับการรันในเครื่อง)
-db = SQLAlchemy(app)
-db = SQLAlchemy(app)
-
-# --- สร้าง Flask app ก่อน db ---
 load_dotenv()
 
 # --- สร้าง Flask app ก่อน db ---
@@ -20,7 +16,6 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fwfregwqdsvqwddawfe')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///dev.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
 db = SQLAlchemy(app)
 
 # --- ตั้งค่า Cloudflare R2 Credentials (ใช้ชื่อ key ที่ถูกต้อง) ---
