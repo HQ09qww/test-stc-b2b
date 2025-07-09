@@ -18,12 +18,7 @@
     <div class="container">
         <div class="header-bar">
             <h1>รายการใบ OT</h1>
-            {% if username %}
-                <div class="user-info">
-                    สวัสดี, {{ username }}!
-                    <a href="{{ url_for('logout') }}"><button class="logout-button">ออกจากระบบ</button></a>
-                </div>
-            {% endif %}
+            <!-- ระบบนี้ไม่มี user/logout อีกต่อไป ลบ user-info ออก -->
         </div>
 
         <!-- Search Bar -->
