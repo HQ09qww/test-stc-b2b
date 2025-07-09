@@ -1,39 +1,34 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from dotenv import load_dotenv
 import uuid
 import boto3
 from botocore.client import Config
-from werkzeug.security import generate_password_hash, check_password_hash # สำหรับเข้ารหัส/ตรวจสอบรหัสผ่าน
-from functools import wraps # สำหรับสร้าง decorator @login_required
+
 
 # โหลดตัวแปรสภาพแวดล้อมจากไฟล์ .env (สำหรับการรันในเครื่อง)
-load_dotenv()
-# --- การตั้งค่าฐานข้อมูล ---
-
+db = SQLAlchemy(app)
 db = SQLAlchemy(app)
 
-# --- ตั้งค่า Flask Secret Key ---
+# --- สร้าง Flask app ก่อน db ---
+load_dotenv()
+
+# --- สร้าง Flask app ก่อน db ---
+app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fwfregwqdsvqwddawfe')
-
-# --- ตั้งค่า Cloudflare R2 Credentials ---
-# ดึงจาก Environment Variables
-R2_ACCESS_KEY_ID = os.environ.get('f38974467f3cc3f24aa8dbb144e56352')
-R2_SECRET_ACCESS_KEY = os.environ.get('03b785eb5df51180f93787c85cf96ff77b1614113d3af3777b4ee3de3cd833c9')
-R2_ACCOUNT_ID = os.environ.get('af83c7dc9757b49457b31c4791bdf16e') # Account ID ของ Cloudflare
-R2_BUCKET_NAME = os.environ.get('test-stc-ot') # ชื่อ Bucket ของ R2
-R2_PUBLIC_URL_BASE = os.environ.get('https://pub-dec3f8eb0f0a4b42becd17f19df20a4d.r2.dev') # URL
-
-# --- การตั้งค่าฐานข้อมูล ---
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///dev.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+db = SQLAlchemy(app)
 db = SQLAlchemy(app)
 
-# --- ตั้งค่า Flask Secret Key ---
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fwfregwqdsvqwddawfe')
+# --- ตั้งค่า Cloudflare R2 Credentials (ใช้ชื่อ key ที่ถูกต้อง) ---
+R2_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID')
+R2_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY')
+R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID')
+R2_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME')
+R2_PUBLIC_URL_BASE = os.environ.get('R2_PUBLIC_URL_BASE')
 
 
 
@@ -49,20 +44,7 @@ EMPLOYEES = {
     # เพิ่มข้อมูลพนักงานอื่นๆ ที่นี่
 }
 
-# --- Model ฐานข้อมูลสำหรับผู้ใช้งาน (User) ---
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
 
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-    def __repr__(self):
-        return f'<User {self.username}>'
 
 # --- Model ฐานข้อมูลสำหรับใบ OT (เหมือนเดิม เพิ่ม employee_id) ---
 class OtSlip(db.Model):
@@ -79,76 +61,28 @@ class OtSlip(db.Model):
     def __repr__(self):
         return f'<OtSlip {self.employee_id} - {self.employee_name} ({self.department}) on {self.ot_date}>'
 
-# --- Decorator สำหรับตรวจสอบการ Login ---
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'logged_in' not in session:
-            flash('กรุณาเข้าสู่ระบบก่อน', 'error')
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
+
 
 # --- Routes (เส้นทางของ Web Application) ---
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = User.query.filter_by(username=username).first()
 
-        if user and user.check_password(password):
-            session['logged_in'] = True
-            session['username'] = user.username
-            flash('เข้าสู่ระบบสำเร็จ!', 'success')
-            return redirect(url_for('index'))
-        else:
-            flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'error')
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)
-    session.pop('username', None)
-    flash('ออกจากระบบแล้ว', 'info')
-    return redirect(url_for('login'))
-
-# --- Route สำหรับสร้างผู้ใช้เริ่มต้น (สำหรับ Admin ในการตั้งค่าครั้งแรก) ---
-# **สำคัญ:** ควรลบหรือปิดใช้งาน Route นี้หลังจากสร้างผู้ใช้ Admin เสร็จแล้ว
-@app.route('/register_admin')
-def register_admin():
-    # ตรวจสอบว่ามีผู้ใช้แล้วหรือยัง
-    if User.query.filter_by(username='admin').first():
-        return "Admin user already exists. Please delete this route after initial setup."
-    
-    admin_user = User(username='admin')
-    admin_user.set_password('admin_password') # **เปลี่ยนรหัสผ่านนี้เป็นรหัสผ่านที่ปลอดภัยของคุณ!**
-    db.session.add(admin_user)
-    db.session.commit()
-    return "Admin user 'admin' created successfully. **Please change its password immediately and consider removing this route!**"
 
 
 @app.route('/')
-@login_required # ต้อง Login ก่อนถึงจะเข้าถึงหน้านี้ได้
 def index():
-    search_query = request.args.get('search', '') # รับค่า search query
-    
+    search_query = request.args.get('search', '')
     # ดึงข้อมูลใบ OT ทั้งหมดจากฐานข้อมูล
-    # เพิ่มฟังก์ชันค้นหา/กรองข้อมูล
+    # เพิ่มฟังก์ชันค้นหา/กรองข้อมูล เฉพาะชื่อ/เลขพนักงาน
     if search_query:
         ot_slips = OtSlip.query.filter(
-            (OtSlip.employee_name.ilike(f'%{search_query}%')) | # ค้นหาจากชื่อพนักงาน
-            (OtSlip.department.ilike(f'%{search_query}%')) | # ค้นหาจากแผนก
-            (OtSlip.employee_id.ilike(f'%{search_query}%')) # ค้นหาจากเลขพนักงาน
+            (OtSlip.employee_name.ilike(f'%{search_query}%')) |
+            (OtSlip.employee_id.ilike(f'%{search_query}%'))
         ).order_by(OtSlip.ot_date.desc()).all()
     else:
         ot_slips = OtSlip.query.order_by(OtSlip.ot_date.desc()).all()
-        
-    return render_template('index.html', ot_slips=ot_slips, search_query=search_query, username=session.get('username'))
+    return render_template('index.html', ot_slips=ot_slips, search_query=search_query)
 
 @app.route('/add', methods=['GET', 'POST'])
-@login_required # ต้อง Login ก่อนถึงจะเข้าถึงหน้านี้ได้
 def add_ot_slip():
     # กำหนดรายการแผนกที่คุณมี (สำหรับแสดงในกรณีที่ auto-populate ไม่ทำงาน หรือต้องการตัวเลือกอื่น)
     departments = ["HR", "IT", "Sales", "Marketing", "Finance", "Production", "Other"]
@@ -280,7 +214,6 @@ def employee_lookup(employee_id):
 
 # --- API Endpoint สำหรับลบใบ OT ---
 @app.route('/delete_ot/<int:ot_id>', methods=['POST'])
-@login_required # ต้อง Login ก่อนถึงจะลบได้
 def delete_ot(ot_id):
     ot_slip = OtSlip.query.get_or_404(ot_id)
     
@@ -313,7 +246,4 @@ def delete_ot(ot_id):
 
 # --- สำหรับการรันแอปพลิเคชัน ---
 if __name__ == '__main__':
-    # **สำคัญ:** สำหรับการตั้งค่าผู้ใช้ Admin ครั้งแรก
-    # ให้รันแอปในเครื่อง (python app.py) แล้วเข้า http://127.0.0.1:5000/register_admin
-    # หลังจากสร้างแล้ว **ควรลบหรือคอมเมนต์ Route /register_admin นี้ออก** เพื่อความปลอดภัย
     app.run(debug=True)
